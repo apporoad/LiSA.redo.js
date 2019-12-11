@@ -1,5 +1,4 @@
 
-
 var Redo=function(path){
     var _this = this
     _this.submit= _this.commit= _this.put = _this.push= _this.one = ()=>{
