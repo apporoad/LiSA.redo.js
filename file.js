@@ -11,9 +11,44 @@ const defaultChangeNameSize= 50*1024*1024
 const defaultChangeNameCount=10000
 
 function thin(currentRedoFile){
-
+    //find 
 }
 
+function getThinRedoFiles(currentRedoFile){
+    var index = getLastNumber(currentRedoFile)
+    if(!index){
+        return []
+    }
+    var files = getRedoFiles(currentRedoFile.substring(0,index.position))
+    var needThinFiles =[]
+    var thinedFiles=[]
+    var thiningFiles=[]
+    var unexpected = []
+    files.forEach(f=>{
+        var i = getLastNumber(f)
+        if(i){
+            if(i.index< index.index){
+                needThinFiles.push(f)
+            }else{
+                unexpected.push(f)
+            }
+        }else{
+            if(utils.endWith(f,'.thin')){
+                thinedFiles.push(f)
+            }else if(utils.endWith(f,'.thining')){
+                thiningFiles.push(f)
+            }else{
+                needThinFiles.push(f)
+            }
+        }
+    })
+    return {
+        needThin: needThinFiles,
+        thined : thinedFiles,
+        thining : thiningFiles,
+        unexpected : unexpected
+    }
+}
 
 function getRedoFiles(name){
     var dir = Path.dirname(name)
@@ -50,21 +85,29 @@ function getCurrentRedoFile(name){
     }
     return currentFile || name
 }
-
+function getLastNumber(name){
+   var index = name.lastIndexOf('.')
+   if(index==-1){
+       return null
+   } else{
+       var last = name.substr(index+1)
+       if(isNaN(last)){
+            return null
+       }else{
+           return { index: parseInt(last),
+                    position : index }
+       }
+   }
+}
 function getNextRedoFile(name){
-    var index = name.lastIndexOf('.')
+    var index = getLastNumber(name)
     var pureFilePath = null
     var nextIndex = 1
-    if(index==-1){
+    if(!index){
         pureFilePath = name
     }else {
-        var last = name.substr(index+1)
-        if(isNaN(last)){
-            pureFilePath = name
-        }else{
-            pureFilePath = name.substring(0,index)
-            nextIndex = parseInt(last) +1
-        }
+        pureFilePath = name.substring(0,index.position)
+        nextIndex = index.index +1
     }
     return pureFilePath + '.' + nextIndex
 }
@@ -118,10 +161,14 @@ module.exports = RedoFile
 
 module.exports.test=function(){
 
-    console.log(getRedoFiles(__dirname+'/test/test1/test.redodemo'))
+    //console.log(getRedoFiles(__dirname+'/test/test1/test.redodemo'))
     //console.log(getCurrentRedoFile(__dirname+'/test/test1/test.redodemo'))
+
+    console.log(getThinRedoFiles(__dirname+'/test/test1/test.redodemo.11'))
 
     //console.log(getNextRedoFile(__dirname+'/test/test1/test.redodemo'))
     //console.log(getNextRedoFile(__dirname+'/test/test1/test.redodemo.11'))
     //console.log(getNextRedoFile(__dirname+'/test/test1/abc'))
+
+
 }
