@@ -8,6 +8,7 @@ const ds = 'd' + split
 
 const defaultChangeNameInterval=5*60*1000
 const defaultChangeNameSize= 50*1024*1024
+const defaultChangeNameCount=10000
 
 function thin(currentRedoFile){
 
@@ -73,11 +74,14 @@ function RedoFile(name,options){
     options = options || {}
     var changeNameInterval = options.changeNameInterval || defaultChangeNameInterval
     var changeNameSize = options.changeNameSize || defaultChangeNameSize
+    var changeNameCount = options.changeNameCount || defaultChangeNameCount
     _this._name = name
     _this.lastChangeNameTime=Date.now()
+    _this.count =0
     _this.add=(id,p)=>{
         // p must be a json
         fs.appendFileSync(_this._name, cs + id + split+ stringify(p) + '\n','utf8')
+        _this.count++
         changeName()
     }
     _this.del=(id)=>{
@@ -85,18 +89,22 @@ function RedoFile(name,options){
     }
 
     var changeName=()=>{
-        if(Date.now() - _this.lastChangeNameTime < changeNameInterval){
+        var isReachInterval = Date.now() - _this.lastChangeNameTime > changeNameInterval
+        var isReachCount = _this.count > changeNameCount
+        if(!isReachCount && !isReachInterval){
             return
         }
+        //console.log(_this.count, ' 1 ' , _this.lastChangeNameTime)
+        _this.count=0
         _this.lastChangeNameTime = Date.now()
-        fs.stat(_this._name,(error,s)=>{
-            if(s.size()> changeNameSize){
-               _this._name = getNextRedoFile(_this._name)
-               if(!fs.existsSync(_this._name)){
-                    fs.writeFileSync(_this._name,'','utf8')
-                }
+        var stat = fs.statSync(_this._name)
+        //console.log(stat.size,'aaaaaa')
+        if(stat.size> changeNameSize){
+            _this._name = getNextRedoFile(_this._name)
+            if(!fs.existsSync(_this._name)){
+                fs.writeFileSync(_this._name,'','utf8')
             }
-        })
+        }
     }
 
     _this._name = getCurrentRedoFile(_this._name)
