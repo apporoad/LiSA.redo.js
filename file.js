@@ -11,7 +11,28 @@ const defaultChangeNameSize= 50*1024*1024
 const defaultChangeNameCount=10000
 
 function thin(currentRedoFile){
-    //find 
+    var thinFileInfos = getThinRedoFiles(currentRedoFile)
+    //warn unexpected
+    if(thinFileInfos.unexpected.length>0){
+        thinFileInfos.unexpected.forEach(f=>{
+            console.debug("redo.file unexpected files: " , f)
+        })
+    }
+    //unlink thining
+    if(thinFileInfos.thining.length>0){
+        thinFileInfos.thining.forEach(f=>{
+            fs.unlink(f)
+        })
+    }
+    //get real need thin
+    var realNeedThins = thinFileInfos.needThin.concat(thinFileInfos.thined)
+    realNeedThins.sort()
+    doThin(realNeedThins)
+}
+
+function doThin(needThinFiles){
+    var thiningFileName = '??'
+    //todo
 }
 
 function getThinRedoFiles(currentRedoFile){
