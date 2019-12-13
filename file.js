@@ -2,6 +2,7 @@ const fs = require('fs')
 const Path = require('path')
 const utils = require('lisa.utils')
 const stringify = require('fast-safe-stringify')
+const lineByLine = require('n-readlines')
 const split = '@d@'
 const cs = 'c' + split
 const ds = 'd' + split
@@ -9,6 +10,8 @@ const ds = 'd' + split
 const defaultChangeNameInterval=5*60*1000
 const defaultChangeNameSize= 50*1024*1024
 const defaultChangeNameCount=10000
+// if bigger than 14m , it is better use big-map
+const defaultThinMapSize = 1000000
 
 function thin(currentRedoFile){
     var thinFileInfos = getThinRedoFiles(currentRedoFile)
@@ -21,18 +24,66 @@ function thin(currentRedoFile){
     //unlink thining
     if(thinFileInfos.thining.length>0){
         thinFileInfos.thining.forEach(f=>{
-            fs.unlink(f)
+            fs.unlink(f,()=>{})
         })
     }
+    var realNeedThins= null
     //get real need thin
-    var realNeedThins = thinFileInfos.needThin.concat(thinFileInfos.thined)
-    realNeedThins.sort()
+    realNeedThins = thinFileInfos.needThin.concat(thinFileInfos.thined)
+
+    realNeedThins.sort((a,b)=>{
+        var aa  = utils.endTrim(a,'.thin')
+        var bb = utils.endTrim(b,'.thin')
+        if(aa==bb){
+            return a>b
+        }
+        return aa > bb
+    })
     doThin(realNeedThins)
+    return realNeedThins
 }
 
 function doThin(needThinFiles){
-    var thiningFileName = '??'
-    //todo
+    if(needThinFiles.length==0){
+        return
+    }
+    if(utils.endWith(needThinFiles[needThinFiles.length-1],'.thin')){
+        //no need to thin
+        return
+    }
+    var thiningMap = new Map()
+    needThinFiles.forEach(ntf=>{
+        readOneFile(map,ntf)
+    })
+    var thiningFileName = needThinFiles[needThinFiles.length-1] + '.thining'
+    //write 2 thining
+    todo
+}
+
+function readOneFile(map,needThinFile){
+    var liner = new lineByLine(needThinFile)
+    let line
+    let lineNumber = 0
+    while (line = liner.next()) {
+        //console.log('Line ' + lineNumber + ': ' + line.toString('utf8'));
+        if(line){
+            var temp = line.split(split)
+            if(temp.length>1){
+                if(temp[0]==='c'){
+                    map.set(int.parseInt(temp[1]),temp[2])
+                }else if(temp[0]==='d'){
+                    map.delete(int.parseInt(temp[1]))
+                }
+            }
+        }
+        // too large judgement
+        if(lineNumber> defaultThinMapSize && lineNumber % (defaultThinMapSize/10).toFixed(0) == 0){
+            if(map.size > defaultThinMapSize){
+                throw Error('lisa.redo.file map too large when reading:' + needThinFile)
+            }
+        }
+        lineNumber++;
+    }
 }
 
 function getThinRedoFiles(currentRedoFile){
@@ -185,11 +236,12 @@ module.exports.test=function(){
     //console.log(getRedoFiles(__dirname+'/test/test1/test.redodemo'))
     //console.log(getCurrentRedoFile(__dirname+'/test/test1/test.redodemo'))
 
-    console.log(getThinRedoFiles(__dirname+'/test/test1/test.redodemo.11'))
+    //console.log(getThinRedoFiles(__dirname+'/test/test1/test.redodemo.11'))
 
     //console.log(getNextRedoFile(__dirname+'/test/test1/test.redodemo'))
     //console.log(getNextRedoFile(__dirname+'/test/test1/test.redodemo.11'))
     //console.log(getNextRedoFile(__dirname+'/test/test1/abc'))
 
+    console.log(thin(__dirname+'/test/test1/test.redodemo.11'))
 
 }
