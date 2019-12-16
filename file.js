@@ -12,6 +12,7 @@ const defaultChangeNameSize= 50*1024*1024
 const defaultChangeNameCount=10000
 // if bigger than 14m , it is better use big-map
 const defaultThinMapSize = 1000000
+const defaultWriteBatchSize = 50000
 
 function thin(currentRedoFile){
     var thinFileInfos = getThinRedoFiles(currentRedoFile)
@@ -39,8 +40,8 @@ function thin(currentRedoFile){
         }
         return aa > bb
     })
-    doThin(realNeedThins)
-    return realNeedThins
+    return doThin(realNeedThins)
+    //return realNeedThins
 }
 
 function doThin(needThinFiles){
@@ -57,7 +58,34 @@ function doThin(needThinFiles){
     })
     var thiningFileName = needThinFiles[needThinFiles.length-1] + '.thining'
     //write 2 thining
-    todo
+    write2File(thiningMap,thiningFileName)
+    //mv thining file
+    fs.renameSync(thiningFileName,needThinFiles[needThinFiles.length-1] + '.thin')
+    // unlink needThinFiles
+    needThinFiles.forEach(f=>{
+        fs.unlink(f,()=>{})
+    })
+    return thiningMap
+}
+
+function write2File(map,tgtFile){
+    var buffer =''
+    var index = 0 
+    if(!fs.existsSync(tgtFile)){
+        fs.writeFileSync(tgtFile,'','utf8')
+    }
+    for (var item of map.entries()) {
+        buffer += cs+ item[0] + split + item[1] + '\n'
+        index++
+
+        if(index>defaultWriteBatchSize){
+            fs.appendFileSync(tgtFile,buffer,'utf8')
+            index=0
+            buffer=''
+        }
+    }
+    if(buffer.length>0)
+        fs.appendFileSync(tgtFile,buffer,'utf8')
 }
 
 function readOneFile(map,needThinFile){
