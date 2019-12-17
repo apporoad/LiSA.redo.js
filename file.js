@@ -15,6 +15,35 @@ const defaultChangeNameCount=10000
 const defaultThinMapSize = 1000000
 const defaultWriteBatchSize = 50000
 
+function load(currentRedoFile){
+    var redoFiles = getThinRedoFiles(currentRedoFile)
+    var alls = (redoFiles.needThin || []).concat(redoFiles.thined||[])
+    alls.push(currentRedoFile)
+    alls.sort((a,b)=>{
+        var aa  = utils.endTrim(a,'.thin')
+        var bb = utils.endTrim(b,'.thin')
+        var aa = getLastNumber(aa) || 0
+        var bb = getLastNumber(bb) || 0
+        if(aa){
+            aa = aa.index
+        }
+        if(bb){
+            bb = bb.index
+        }
+        //console.log(a,aa,b,bb)
+        if(aa==bb){
+            //console.log('xxxxxxxxxxxxxxxxxxx')
+            return utils.endWith(a,'.thin') ? 1 : -1
+        }
+        return aa - bb
+    })
+    var mapAll = new Map()
+    alls.forEach(f=>{
+        readOneFile(mapAll,f)
+    })
+    return mapAll
+}
+
 function thin(currentRedoFile){
     var thinFileInfos = getThinRedoFiles(currentRedoFile)
     //warn unexpected
@@ -79,7 +108,8 @@ function doThin(needThinFiles){
     fs.renameSync(thiningFileName,needThinFiles[needThinFiles.length-1] + '.thin')
     // unlink needThinFiles
     needThinFiles.forEach(f=>{
-        console.log(f)
+        //console.log(f)
+        debug('rm :' +f)
         fs.unlink(f,()=>{})
     })
     return thiningMap
@@ -251,6 +281,20 @@ function RedoFile(name,options){
         fs.appendFileSync(_this._name, ds + id + '\n','utf8')
     }
 
+    this.load=()=>{
+        var curr = getCurrentRedoFile(_this._name)
+        var map = load(curr)
+        var array =[]
+        for (var item of map.entries()) {
+            array.push({
+                id : item[0],
+                param : JSON.parse(item[1])
+            })
+        }
+        return array
+    }
+
+
     var changeName=()=>{
         var isReachInterval = Date.now() - _this.lastChangeNameTime > changeNameInterval
         var isReachCount = _this.count > changeNameCount
@@ -267,6 +311,8 @@ function RedoFile(name,options){
             if(!fs.existsSync(_this._name)){
                 fs.writeFileSync(_this._name,'','utf8')
             }
+            //do thin
+            thin(_this._name)
         }
     }
 
@@ -280,6 +326,8 @@ function RedoFile(name,options){
 module.exports = RedoFile
 
 module.exports.thin = thin
+
+module.exports.load = load
 
 module.exports.getCurrentRedoFile = getCurrentRedoFile
 
