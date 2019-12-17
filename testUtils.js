@@ -26,3 +26,11 @@ var date3 = Date.now()
 
 console.log('took :' + (date2-date1))
 console.log('took :' +(date3-date2))
+
+
+function abc (){
+
+    return ''
+}
+
+console.log(abc())

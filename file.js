@@ -3,6 +3,7 @@ const Path = require('path')
 const utils = require('lisa.utils')
 const stringify = require('fast-safe-stringify')
 const lineByLine = require('n-readlines')
+const debug = require('debug')('LiSA.redo.file')
 const split = '@d@'
 const cs = 'c' + split
 const ds = 'd' + split
@@ -19,7 +20,7 @@ function thin(currentRedoFile){
     //warn unexpected
     if(thinFileInfos.unexpected.length>0){
         thinFileInfos.unexpected.forEach(f=>{
-            console.debug("redo.file unexpected files: " , f)
+            debug("redo.file unexpected files: " , f)
         })
     }
     //unlink thining
@@ -35,27 +36,42 @@ function thin(currentRedoFile){
     realNeedThins.sort((a,b)=>{
         var aa  = utils.endTrim(a,'.thin')
         var bb = utils.endTrim(b,'.thin')
-        if(aa==bb){
-            return a>b
+        var aa = getLastNumber(aa) || 0
+        var bb = getLastNumber(bb) || 0
+        if(aa){
+            aa = aa.index
         }
-        return aa > bb
+        if(bb){
+            bb = bb.index
+        }
+        //console.log(a,aa,b,bb)
+        if(aa==bb){
+            //console.log('xxxxxxxxxxxxxxxxxxx')
+            return utils.endWith(a,'.thin') ? 1 : -1
+        }
+        return aa - bb
     })
+
+    //console.log(realNeedThins)
     return doThin(realNeedThins)
     //return realNeedThins
 }
 
 function doThin(needThinFiles){
+    //console.log(needThinFiles)
     if(needThinFiles.length==0){
         return
     }
     if(utils.endWith(needThinFiles[needThinFiles.length-1],'.thin')){
         //no need to thin
+        debug('LiSA.redo.file lastThinfile， no need to thin')
         return
     }
     var thiningMap = new Map()
     needThinFiles.forEach(ntf=>{
-        readOneFile(map,ntf)
+        readOneFile(thiningMap,ntf)
     })
+    //console.log('aaa')
     var thiningFileName = needThinFiles[needThinFiles.length-1] + '.thining'
     //write 2 thining
     write2File(thiningMap,thiningFileName)
@@ -63,6 +79,7 @@ function doThin(needThinFiles){
     fs.renameSync(thiningFileName,needThinFiles[needThinFiles.length-1] + '.thin')
     // unlink needThinFiles
     needThinFiles.forEach(f=>{
+        console.log(f)
         fs.unlink(f,()=>{})
     })
     return thiningMap
@@ -95,12 +112,15 @@ function readOneFile(map,needThinFile){
     while (line = liner.next()) {
         //console.log('Line ' + lineNumber + ': ' + line.toString('utf8'));
         if(line){
-            var temp = line.split(split)
+            //console.log(line)
+            var temp = line.toString('utf8').split(split)
             if(temp.length>1){
+                //console.log(temp)
                 if(temp[0]==='c'){
-                    map.set(int.parseInt(temp[1]),temp[2])
+                    map.set(parseInt(temp[1]),temp[2])
                 }else if(temp[0]==='d'){
-                    map.delete(int.parseInt(temp[1]))
+                    //console.log('del:' +temp[1])
+                    map.delete(parseInt(temp[1]))
                 }
             }
         }
@@ -221,13 +241,13 @@ function RedoFile(name,options){
     _this._name = name
     _this.lastChangeNameTime=Date.now()
     _this.count =0
-    _this.add=(id,p)=>{
+    this.add=(id,p)=>{
         // p must be a json
         fs.appendFileSync(_this._name, cs + id + split+ stringify(p) + '\n','utf8')
         _this.count++
         changeName()
     }
-    _this.del=(id)=>{
+    this.del=(id)=>{
         fs.appendFileSync(_this._name, ds + id + '\n','utf8')
     }
 
@@ -259,6 +279,10 @@ function RedoFile(name,options){
 
 module.exports = RedoFile
 
+module.exports.thin = thin
+
+module.exports.getCurrentRedoFile = getCurrentRedoFile
+
 module.exports.test=function(){
 
     //console.log(getRedoFiles(__dirname+'/test/test1/test.redodemo'))
@@ -270,6 +294,6 @@ module.exports.test=function(){
     //console.log(getNextRedoFile(__dirname+'/test/test1/test.redodemo.11'))
     //console.log(getNextRedoFile(__dirname+'/test/test1/abc'))
 
-    console.log(thin(__dirname+'/test/test1/test.redodemo.11'))
+    //console.log(thin(__dirname+'/test/test1/test.redodemo.11'))
 
 }
