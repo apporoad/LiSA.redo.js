@@ -1,6 +1,10 @@
-var test=require('./index')(__dirname+'/test.redo').order()
+var testRedo=require('./index')(__dirname+'/test.redo')
 
-test.handler((params,cb)=>{
+//set redo run by order
+testRedo.order()
+
+//set redo's handler
+testRedo.handler((params,cb)=>{
     console.log(params)
     //cb("hello")
     // return "hello"
@@ -15,5 +19,5 @@ test.handler((params,cb)=>{
 //test.invoke({name:"LiSA",age:32})
 
 setTimeout(() => {
-    test.stop()
+    testRedo.stop()
 }, 400);
