@@ -61,10 +61,13 @@ var Redo=function(path){
         //console.log(_this._index)
     }
     _this.init()
+    _this.started = false
     this.stop = ()=>{
         _this.promise.stopAuto()
+        _this.started = false
     }
     _this.start=()=>{
+        _this.started = true
         var xdo = ()=>{
             var redo
             while(redo =_this._redoQueue.shift()){
@@ -94,7 +97,8 @@ var Redo=function(path){
 
                 },redo)
             }
-            setTimeout(xdo, 50);
+            if(_this.started)
+                setTimeout(xdo, 50);
         }
         xdo()        
     }

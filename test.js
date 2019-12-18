@@ -12,5 +12,8 @@ test.handler((params,cb)=>{
     console.log('redo :', redo)
 })
 
+//test.invoke({name:"LiSA",age:32})
 
-test.invoke({name:"LiSA",age:32})
+setTimeout(() => {
+    test.stop()
+}, 400);
